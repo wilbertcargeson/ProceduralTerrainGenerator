@@ -6,13 +6,7 @@ using UnityEngine;
 public class TerrainGenerator : MonoBehaviour
 {
 
-    Mesh mesh;
-    Vector3[] vertices;
-    int[] triangles;
 
-    Vector2[] uv;
-
-    Color[] colors;
 
     public static int terrainSize = 256;
 
@@ -46,23 +40,69 @@ public class TerrainGenerator : MonoBehaviour
     [Range(0, 6)]
     public int levelOfDetail; // The higher, less triangles will be used
 
-    void Start()
-    {
+    Queue<TerrainMeshDataInfo<TerrainMeshData>> terrainInfoQueue = new Queue<TerrainMeshDataInfo<TerrainMeshData>>();
 
-        mesh = new Mesh();
-        GetComponent<MeshFilter>().mesh = mesh;
-        CreateShape();
-        UpdateMesh();
+    // void Update()
+    // {
+    //     // Spawn a single terrain, only for editing
+    //     Mesh mesh = new Mesh();
+    //     GetComponent<MeshFilter>().mesh = mesh;
+    //     TerrainMeshData data = CreateMeshData(Vector2.zero);
+    //     mesh.vertices = data.vertices;
+    //     mesh.colors = data.colors;
+    //     mesh.triangles = data.triangles;
+    //     mesh.RecalculateNormals();
+    // }
+    void Update()
+    {
+        if (terrainInfoQueue.Count > 0)
+        {
+            for (int i = 0; i < terrainInfoQueue.Count; i++)
+            {
+                TerrainMeshDataInfo<TerrainMeshData> terrainInfo = terrainInfoQueue.Dequeue();
+                terrainInfo.callback(terrainInfo.parameter);
+            }
+        }
+    }
+
+    public void RequestTerrainMeshData(System.Action<TerrainMeshData> callback, Vector2 threadOffSet, int meshLOD)
+    {
+        System.Threading.ThreadStart threadStart = delegate
+        {
+            TerrainMeshDataThread(callback, threadOffSet, meshLOD);
+        };
+
+        new System.Threading.Thread(threadStart).Start();
+    }
+
+    void TerrainMeshDataThread(System.Action<TerrainMeshData> callback, Vector2 threadOffSet, int meshLOD)
+    {
+        levelOfDetail = meshLOD;
+        TerrainMeshData data = CreateMeshData(threadOffSet);
+        lock (terrainInfoQueue)
+        { // Avoid race condition
+            terrainInfoQueue.Enqueue(new TerrainMeshDataInfo<TerrainMeshData>(callback, data));
+        }
     }
 
 
-
-    void CreateShape()
+    TerrainMeshData CreateMeshData(Vector2 threadOffset)
     {
+        Vector3[] vertices;
+        int[] triangles;
+        Color[] colors;
+
         vertices = new Vector3[((terrainSize + 1) * (terrainSize + 1))];
         colors = new Color[((terrainSize + 1) * (terrainSize + 1))];
         System.Random pseudoRandom = new System.Random(seed);
+
         octaveOffsets = new Vector2[octaves];
+        for (int i = 0; i < octaves; i++)
+        {
+            float octaveOffSetX = pseudoRandom.Next(-100000, 100000) + offsetx + threadOffset.x;
+            float octaveOffSetY = pseudoRandom.Next(-100000, 100000) - offsety - threadOffset.y;
+            octaveOffsets[i] = new Vector2(octaveOffSetX, octaveOffSetY);
+        }
 
         int simplificationInc = levelOfDetail == 0 ? 1 : levelOfDetail * 2;
         int verticesPerLine = (terrainSize - 1) / simplificationInc + 1;
@@ -73,12 +113,6 @@ public class TerrainGenerator : MonoBehaviour
 
         float halfterrainSize = terrainSize / 2f;
 
-        for (int i = 0; i < octaves; i++)
-        {
-            float offSetX = pseudoRandom.Next(-100000, 100000) + offsetx;
-            float offSetY = pseudoRandom.Next(-100000, 100000) + offsety;
-            octaveOffsets[i] = new Vector2(offSetX, offSetY);
-        }
 
         // Getting height of each vertices using perlin noise
         for (int z = 0, index = 0; z <= terrainSize; z += simplificationInc)
@@ -92,8 +126,8 @@ public class TerrainGenerator : MonoBehaviour
 
                 for (int i = 0; i < octaves; i++)
                 {
-                    float x1 = (float)x / scale * frequency + octaveOffsets[i].x;
-                    float z1 = (float)z / scale * frequency + octaveOffsets[i].y;
+                    float x1 = (float)(x - halfterrainSize + octaveOffsets[i].x) / scale * frequency;
+                    float z1 = (float)(z - halfterrainSize + octaveOffsets[i].y) / scale * frequency;
                     float perlin = Mathf.PerlinNoise(x1, z1);
 
                     noiseHeight += perlin * amplitude;
@@ -143,16 +177,7 @@ public class TerrainGenerator : MonoBehaviour
             vert++;
         }
 
-    }
-
-    void UpdateMesh()
-    {
-        mesh.Clear();
-        mesh.vertices = vertices;
-        mesh.triangles = triangles;
-        mesh.uv = uv;
-        mesh.colors = colors;
-        mesh.RecalculateNormals();
+        return new TerrainMeshData(vertices, triangles, colors);
     }
 
     void OnValidate()
@@ -166,6 +191,35 @@ public class TerrainGenerator : MonoBehaviour
         {
             scale = 1;
         }
+    }
+
+    // Struct for storing necessary information to create a mesh
+    public struct TerrainMeshData
+    {
+        public Vector3[] vertices;
+        public int[] triangles;
+        public Color[] colors;
+
+        public TerrainMeshData(Vector3[] vertices, int[] triangles, Color[] colors)
+        {
+            this.vertices = vertices;
+            this.triangles = triangles;
+            this.colors = colors;
+        }
+    }
+
+    // Struct for threading
+    public struct TerrainMeshDataInfo<T>
+    {
+        public readonly System.Action<T> callback;
+        public readonly T parameter;
+
+        public TerrainMeshDataInfo(System.Action<T> callback, T parameter)
+        {
+            this.callback = callback;
+            this.parameter = parameter;
+        }
+
     }
 
 
