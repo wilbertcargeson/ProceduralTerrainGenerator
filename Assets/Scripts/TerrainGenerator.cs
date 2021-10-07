@@ -48,28 +48,28 @@ public class TerrainGenerator : MonoBehaviour
 
     Queue<TerrainMeshDataInfo<TerrainMeshData>> terrainInfoQueue = new Queue<TerrainMeshDataInfo<TerrainMeshData>>();
 
-    void Start()
-    {
-        // Spawn a single terrain, only for editing
-        Mesh mesh = new Mesh();
-        GetComponent<MeshFilter>().mesh = mesh;
-        TerrainMeshData data = CreateMeshData(Vector2.zero);
-        mesh.vertices = data.vertices;
-        mesh.colors = data.colors;
-        mesh.triangles = data.triangles;
-        mesh.RecalculateNormals();
-    }
-    // void Update()
+    // void Start()
     // {
-    //     if (terrainInfoQueue.Count > 0)
-    //     {
-    //         for (int i = 0; i < terrainInfoQueue.Count; i++)
-    //         {
-    //             TerrainMeshDataInfo<TerrainMeshData> terrainInfo = terrainInfoQueue.Dequeue();
-    //             terrainInfo.callback(terrainInfo.parameter);
-    //         }
-    //     }
+    //     // Spawn a single terrain, only for editing
+    //     Mesh mesh = new Mesh();
+    //     GetComponent<MeshFilter>().mesh = mesh;
+    //     TerrainMeshData data = CreateMeshData(Vector2.zero);
+    //     mesh.vertices = data.vertices;
+    //     mesh.colors = data.colors;
+    //     mesh.triangles = data.triangles;
+    //     mesh.RecalculateNormals();
     // }
+    void Update()
+    {
+        if (terrainInfoQueue.Count > 0)
+        {
+            for (int i = 0; i < terrainInfoQueue.Count; i++)
+            {
+                TerrainMeshDataInfo<TerrainMeshData> terrainInfo = terrainInfoQueue.Dequeue();
+                terrainInfo.callback(terrainInfo.parameter);
+            }
+        }
+    }
 
     public void RequestTerrainMeshData(System.Action<TerrainMeshData> callback, Vector2 threadOffSet, int meshLOD)
     {
@@ -114,7 +114,7 @@ public class TerrainGenerator : MonoBehaviour
         }
 
         int simplificationInc = levelOfDetail == 0 ? 1 : levelOfDetail * 2;
-        int verticesPerLine = (terrainSize) / simplificationInc + 1;
+        int verticesPerLine = (terrainSize) / simplificationInc;
 
 
         float maxHeight = float.MinValue;
@@ -181,15 +181,17 @@ public class TerrainGenerator : MonoBehaviour
 
             if (evaluateHeight < 0)
             {
-                evaluateHeight = vertices[i].y;
+                evaluateHeight = 0.1f;
             }
 
             float lerpedHeight = Mathf.InverseLerp(0, estimatedMaxHeight + 0.1f, evaluateHeight);
 
-            colors[i] = gradient.Evaluate(lerpedHeight);
 
             // Sets a curve for ensuring water is not curvy
             float curvedHeight = meshHeightCurve.Evaluate(lerpedHeight);
+
+            colors[i] = gradient.Evaluate(curvedHeight);
+
             vertices[i].y = curvedHeight * noiseWeightOnHeight;
         }
 

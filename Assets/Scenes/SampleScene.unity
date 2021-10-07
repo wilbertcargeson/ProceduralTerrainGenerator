@@ -139,7 +139,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 0
+  m_IsActive: 1
 --- !u!114 &334328799
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -568,7 +568,7 @@ MonoBehaviour:
   octaves: 4
   persistence: 0.116
   lacunarity: 5
-  noiseWeightOnHeight: 60
+  noiseWeightOnHeight: 120
   gradient:
     serializedVersion: 2
     key0: {r: 0.37647057, g: 0.6634386, b: 0.8980392, a: 1}
@@ -582,9 +582,9 @@ MonoBehaviour:
     ctime0: 7132
     ctime1: 13107
     ctime2: 20817
-    ctime3: 43754
-    ctime4: 53199
-    ctime5: 65535
+    ctime3: 33924
+    ctime4: 47609
+    ctime5: 56476
     ctime6: 0
     ctime7: 0
     atime0: 0
@@ -605,18 +605,18 @@ MonoBehaviour:
     - serializedVersion: 3
       time: 0
       value: 0
-      inSlope: 1
-      outSlope: 1
-      tangentMode: 34
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
       weightedMode: 0
       inWeight: 0
       outWeight: 0
     - serializedVersion: 3
       time: 1
       value: 1
-      inSlope: 1
-      outSlope: 1
-      tangentMode: 34
+      inSlope: 2
+      outSlope: 2
+      tangentMode: 0
       weightedMode: 0
       inWeight: 0
       outWeight: 0
