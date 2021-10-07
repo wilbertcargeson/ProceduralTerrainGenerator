@@ -87,6 +87,7 @@ public class InfiniteTerrainGenerator : MonoBehaviour
         Bounds bounds;
 
         MeshRenderer terrainRenderer;
+        MeshCollider terrainMeshCollider;
 
         MeshFilter terrainMeshFilter;
         public TerrainObject(Vector2 coordinate, int size, Transform parentTransform, Material material, int meshLOD)
@@ -101,6 +102,7 @@ public class InfiniteTerrainGenerator : MonoBehaviour
             terrainRenderer = terrainObj.AddComponent<MeshRenderer>();
             terrainMeshFilter = terrainObj.AddComponent<MeshFilter>();
             terrainRenderer.material = material;
+            terrainMeshCollider = terrainObj.AddComponent<MeshCollider>();
 
             // terrainObj = GameObject.CreatePrimitive(PrimitiveType.Plane);
             terrainObj.transform.position = positionVector;
@@ -112,11 +114,13 @@ public class InfiniteTerrainGenerator : MonoBehaviour
 
         void OnMeshReceived(TerrainGenerator.TerrainMeshData terrainData)
         {
-            terrainMeshFilter.mesh = new Mesh();
-            terrainMeshFilter.mesh.vertices = terrainData.vertices;
-            terrainMeshFilter.mesh.colors = terrainData.colors;
-            terrainMeshFilter.mesh.triangles = terrainData.triangles;
-            terrainMeshFilter.mesh.RecalculateNormals();
+            Mesh newMesh = new Mesh();
+            newMesh.vertices = terrainData.vertices;
+            newMesh.colors = terrainData.colors;
+            newMesh.triangles = terrainData.triangles;
+            newMesh.RecalculateNormals();
+            terrainMeshFilter.mesh = newMesh;
+            terrainMeshCollider.sharedMesh = newMesh;
         }
 
         public void UpdateTerrainObject()
