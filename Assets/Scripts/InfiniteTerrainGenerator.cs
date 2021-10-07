@@ -51,7 +51,7 @@ public class InfiniteTerrainGenerator : MonoBehaviour
         int currX = Mathf.RoundToInt(playerPosition.x / terrainSize);
         int currZ = Mathf.RoundToInt(playerPosition.y / terrainSize);
 
-        // Loop through all direction from negative to positive visible terrain distance to optain coordinates
+        // Loop through all direction from negative to positive visible terrain distance to obtain coordinates
         for (int zOffset = -visibleTerrainDistance; zOffset <= visibleTerrainDistance; zOffset++)
         {
             for (int xOffset = -visibleTerrainDistance; xOffset <= visibleTerrainDistance; xOffset++)

@@ -48,28 +48,28 @@ public class TerrainGenerator : MonoBehaviour
 
     Queue<TerrainMeshDataInfo<TerrainMeshData>> terrainInfoQueue = new Queue<TerrainMeshDataInfo<TerrainMeshData>>();
 
+    void Start()
+    {
+        // Spawn a single terrain, only for editing
+        Mesh mesh = new Mesh();
+        GetComponent<MeshFilter>().mesh = mesh;
+        TerrainMeshData data = CreateMeshData(Vector2.zero);
+        mesh.vertices = data.vertices;
+        mesh.colors = data.colors;
+        mesh.triangles = data.triangles;
+        mesh.RecalculateNormals();
+    }
     // void Update()
     // {
-    //     // Spawn a single terrain, only for editing
-    //     Mesh mesh = new Mesh();
-    //     GetComponent<MeshFilter>().mesh = mesh;
-    //     TerrainMeshData data = CreateMeshData(Vector2.zero);
-    //     mesh.vertices = data.vertices;
-    //     mesh.colors = data.colors;
-    //     mesh.triangles = data.triangles;
-    //     mesh.RecalculateNormals();
+    //     if (terrainInfoQueue.Count > 0)
+    //     {
+    //         for (int i = 0; i < terrainInfoQueue.Count; i++)
+    //         {
+    //             TerrainMeshDataInfo<TerrainMeshData> terrainInfo = terrainInfoQueue.Dequeue();
+    //             terrainInfo.callback(terrainInfo.parameter);
+    //         }
+    //     }
     // }
-    void Update()
-    {
-        if (terrainInfoQueue.Count > 0)
-        {
-            for (int i = 0; i < terrainInfoQueue.Count; i++)
-            {
-                TerrainMeshDataInfo<TerrainMeshData> terrainInfo = terrainInfoQueue.Dequeue();
-                terrainInfo.callback(terrainInfo.parameter);
-            }
-        }
-    }
 
     public void RequestTerrainMeshData(System.Action<TerrainMeshData> callback, Vector2 threadOffSet, int meshLOD)
     {
@@ -169,8 +169,23 @@ public class TerrainGenerator : MonoBehaviour
         // Evaluate height and colors of vertices
         for (int i = 0; i < vertices.Length; i++)
         {
+            float estimatedMaxHeight = 1.5f;
 
-            float lerpedHeight = Mathf.InverseLerp(minHeight, maxHeight, vertices[i].y);
+            // Ensure height is within range
+            float evaluateHeight = vertices[i].y;
+
+            if (evaluateHeight > estimatedMaxHeight)
+            {
+                evaluateHeight = estimatedMaxHeight;
+            }
+
+            if (evaluateHeight < 0)
+            {
+                evaluateHeight = vertices[i].y;
+            }
+
+            float lerpedHeight = Mathf.InverseLerp(0, estimatedMaxHeight + 0.1f, evaluateHeight);
+
             colors[i] = gradient.Evaluate(lerpedHeight);
 
             // Sets a curve for ensuring water is not curvy
