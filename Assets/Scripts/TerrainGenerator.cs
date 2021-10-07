@@ -7,15 +7,18 @@ public class TerrainGenerator : MonoBehaviour
 {
 
 
-
+    // Terrain size for each object, note that maximum vertices is 256*256, hence maximum is 256 if square
     public static int terrainSize = 256;
 
+    // Custom offsets for the noise
     public float offsetx = 1;
 
     public float offsety = 1;
 
+    // How zoomed in the terrain is
     public float scale = 65;
 
+    // Seed for randomizer to calculate overall noise offset
     public int seed = 1;
 
     [Range(0, 10)]
@@ -24,12 +27,13 @@ public class TerrainGenerator : MonoBehaviour
     [Range(0, 1)]
     public float persistence = 0.2f;
 
+
     [Range(0, 100)]
     public float lacunarity = 5;
 
-    public float depth = 20;
+    // The magnitude in which the noise will affect the terrain, affects mountain height generally
+    public float noiseWeightOnHeight = 20;
 
-    Vector2[] octaveOffsets;
 
     public Gradient gradient;
 
@@ -37,8 +41,10 @@ public class TerrainGenerator : MonoBehaviour
 
     public AnimationCurve meshHeightCurve;
 
+    // The higher, less triangles will be used, this is only used in editing phase
     [Range(0, 6)]
-    public int levelOfDetail; // The higher, less triangles will be used
+    public int levelOfDetail;
+
 
     Queue<TerrainMeshDataInfo<TerrainMeshData>> terrainInfoQueue = new Queue<TerrainMeshDataInfo<TerrainMeshData>>();
 
@@ -88,24 +94,27 @@ public class TerrainGenerator : MonoBehaviour
 
     TerrainMeshData CreateMeshData(Vector2 threadOffset)
     {
+        Vector2[] octaveOffsets;
         Vector3[] vertices;
         int[] triangles;
         Color[] colors;
 
         vertices = new Vector3[((terrainSize + 1) * (terrainSize + 1))];
-        colors = new Color[((terrainSize + 1) * (terrainSize + 1))];
+        colors = new Color[vertices.Length];
+        triangles = new int[6 * vertices.Length];
+
         System.Random pseudoRandom = new System.Random(seed);
 
         octaveOffsets = new Vector2[octaves];
         for (int i = 0; i < octaves; i++)
         {
             float octaveOffSetX = pseudoRandom.Next(-100000, 100000) + offsetx + threadOffset.x;
-            float octaveOffSetY = pseudoRandom.Next(-100000, 100000) - offsety - threadOffset.y;
+            float octaveOffSetY = pseudoRandom.Next(-100000, 100000) + offsety + threadOffset.y;
             octaveOffsets[i] = new Vector2(octaveOffSetX, octaveOffSetY);
         }
 
         int simplificationInc = levelOfDetail == 0 ? 1 : levelOfDetail * 2;
-        int verticesPerLine = (terrainSize - 1) / simplificationInc + 1;
+        int verticesPerLine = (terrainSize) / simplificationInc + 1;
 
 
         float maxHeight = float.MinValue;
@@ -114,6 +123,7 @@ public class TerrainGenerator : MonoBehaviour
         float halfterrainSize = terrainSize / 2f;
 
 
+        int triangleIndex = 0;
         // Getting height of each vertices using perlin noise
         for (int z = 0, index = 0; z <= terrainSize; z += simplificationInc)
         {
@@ -128,7 +138,7 @@ public class TerrainGenerator : MonoBehaviour
                 {
                     float x1 = (float)(x - halfterrainSize + octaveOffsets[i].x) / scale * frequency;
                     float z1 = (float)(z - halfterrainSize + octaveOffsets[i].y) / scale * frequency;
-                    float perlin = Mathf.PerlinNoise(x1, z1);
+                    float perlin = Mathf.PerlinNoise(x1, z1) * 2f;
 
                     noiseHeight += perlin * amplitude;
                     amplitude *= persistence;
@@ -140,6 +150,18 @@ public class TerrainGenerator : MonoBehaviour
                 else if (noiseHeight < minHeight) { minHeight = noiseHeight; }
 
                 vertices[index] = new Vector3(x, noiseHeight, z);
+
+                if (x < terrainSize && z < terrainSize)
+                {// Generate triangles for mesh
+                    triangles[triangleIndex + 0] = index + 0;
+                    triangles[triangleIndex + 1] = index + verticesPerLine + 1;
+                    triangles[triangleIndex + 2] = index + 1;
+                    triangles[triangleIndex + 3] = index + 1;
+                    triangles[triangleIndex + 4] = index + verticesPerLine + 1;
+                    triangles[triangleIndex + 5] = index + verticesPerLine + 2;
+
+                    triangleIndex += 6;
+                }
                 index++;
             }
         }
@@ -153,29 +175,10 @@ public class TerrainGenerator : MonoBehaviour
 
             // Sets a curve for ensuring water is not curvy
             float curvedHeight = meshHeightCurve.Evaluate(lerpedHeight);
-            vertices[i].y = curvedHeight * depth;
+            vertices[i].y = curvedHeight * noiseWeightOnHeight;
         }
 
-        // Generate triangles for mesh
-        int vert = 0;
-        int tris = 0;
-        triangles = new int[6 * terrainSize * terrainSize];
 
-        for (int z = 0; z < terrainSize; z++)
-        {
-            for (int x = 0; x < terrainSize; x++)
-            {
-                triangles[tris + 0] = vert + 0;
-                triangles[tris + 1] = vert + verticesPerLine + 1;
-                triangles[tris + 2] = vert + 1;
-                triangles[tris + 3] = vert + 1;
-                triangles[tris + 4] = vert + verticesPerLine + 1;
-                triangles[tris + 5] = vert + verticesPerLine + 2;
-                vert++;
-                tris += 6;
-            }
-            vert++;
-        }
 
         return new TerrainMeshData(vertices, triangles, colors);
     }

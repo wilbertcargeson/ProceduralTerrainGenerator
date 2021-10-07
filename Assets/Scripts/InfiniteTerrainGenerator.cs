@@ -105,7 +105,6 @@ public class InfiniteTerrainGenerator : MonoBehaviour
             // terrainObj = GameObject.CreatePrimitive(PrimitiveType.Plane);
             terrainObj.transform.position = positionVector;
             terrainObj.transform.parent = parentTransform;
-            terrainMeshFilter.mesh = new Mesh();
             SetVisible(false);
 
             terrainGenerator.RequestTerrainMeshData(OnMeshReceived, position, meshLOD);
@@ -113,6 +112,7 @@ public class InfiniteTerrainGenerator : MonoBehaviour
 
         void OnMeshReceived(TerrainGenerator.TerrainMeshData terrainData)
         {
+            terrainMeshFilter.mesh = new Mesh();
             terrainMeshFilter.mesh.vertices = terrainData.vertices;
             terrainMeshFilter.mesh.colors = terrainData.colors;
             terrainMeshFilter.mesh.triangles = terrainData.triangles;
