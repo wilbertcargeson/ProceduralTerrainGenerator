@@ -22,9 +22,10 @@ public class InfiniteTerrainGenerator : MonoBehaviour
 
     static TerrainGenerator terrainGenerator;
 
-    public GameObject treePrefab;
 
     System.Random pseudoRandom;
+
+    public NaturePrefabs[] naturePrefabs;
 
 
 
@@ -79,7 +80,8 @@ public class InfiniteTerrainGenerator : MonoBehaviour
                     // the lower the level of detail ( in this case: higher number )
                     int meshLOD = 1;
 
-                    terrainDictionary.Add(viewedTerrainCoor, new TerrainObject(viewedTerrainCoor, terrainSize, this.transform, terrainMaterial, meshLOD, treePrefab, pseudoRandom));
+                    terrainDictionary.Add(viewedTerrainCoor, new TerrainObject(viewedTerrainCoor, terrainSize,
+                     this.transform, terrainMaterial, meshLOD, naturePrefabs, pseudoRandom));
                 }
             }
         }
@@ -100,14 +102,14 @@ public class InfiniteTerrainGenerator : MonoBehaviour
 
         System.Random pseudoRandom;
 
-        GameObject treePrefab;
+        NaturePrefabs[] naturePrefabs;
 
         Vector3 positionVector;
 
 
-        public TerrainObject(Vector2 coordinate, int size, Transform parentTransform, Material material, int meshLOD, GameObject treePrefab, System.Random random)
+        public TerrainObject(Vector2 coordinate, int size, Transform parentTransform, Material material, int meshLOD, NaturePrefabs[] prefabs, System.Random random)
         {
-            this.treePrefab = treePrefab;
+            this.naturePrefabs = prefabs;
             pseudoRandom = random;
             position = coordinate * size;
             Debug.Log(position);
@@ -141,18 +143,30 @@ public class InfiniteTerrainGenerator : MonoBehaviour
             newMesh.RecalculateNormals();
             terrainMeshFilter.mesh = newMesh;
             terrainMeshCollider.sharedMesh = newMesh;
-            spawnTrees(terrainData.vertices);
+            spawnNature(terrainData.vertices);
         }
 
-        void spawnTrees(Vector3[] vertices)
+        // Spawn nature objects in forest like setting
+        void spawnNature(Vector3[] vertices)
         {
             for (int i = 0; i < vertices.Length; i++)
             {
                 float heightPercentile = Mathf.InverseLerp(0, TerrainGenerator.estimatedMaxHeight * TerrainGenerator.noiseWeightOnHeight, vertices[i].y);
-                if (heightPercentile < 0.6 && heightPercentile > 0.10 && pseudoRandom.Next(1, 100) < 5)
+                if (heightPercentile < 0.25f && heightPercentile > 0.1f && naturePrefabs.Length > 0)
                 {
-                    Vector3 placedTreeLocation = new Vector3(vertices[i].x, vertices[i].y + 0.1f, vertices[i].z) + positionVector;
-                    Instantiate(treePrefab, placedTreeLocation, Quaternion.identity, terrainObj.transform);
+                    for (int j = 0; j < naturePrefabs.Length; j++)
+                    {
+                        double changeToSpawn = naturePrefabs[j].chanceOfAppearing -
+                        naturePrefabs[j].chanceOfAppearing * heightPercentile * 2; // We want lower chance on higher altitudes
+                        if (pseudoRandom.NextDouble() < changeToSpawn)
+                        {
+                            Vector3 placedTreeLocation = new Vector3(vertices[i].x, vertices[i].y + 0.1f, vertices[i].z) + positionVector;
+                            Instantiate(naturePrefabs[j].spawnPrefab, placedTreeLocation, Quaternion.identity, terrainObj.transform);
+                            break;
+                        }
+                    }
+
+
                 }
             }
         }
@@ -172,6 +186,22 @@ public class InfiniteTerrainGenerator : MonoBehaviour
         public bool IsVisible()
         {
             return terrainObj.activeSelf;
+        }
+    }
+
+    [System.Serializable]
+    public struct NaturePrefabs
+    {
+
+        [Range(0, 1)]
+        public float chanceOfAppearing;
+
+        public GameObject spawnPrefab;
+
+        public NaturePrefabs(float COA, GameObject prefab)
+        {
+            chanceOfAppearing = COA;
+            spawnPrefab = prefab;
         }
     }
 }

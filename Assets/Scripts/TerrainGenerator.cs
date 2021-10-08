@@ -46,7 +46,7 @@ public class TerrainGenerator : MonoBehaviour
     public int levelOfDetail;
 
     public static float estimatedMaxHeight = 1.75f;
-
+    Mesh mesh;
 
 
     Queue<TerrainMeshDataInfo<TerrainMeshData>> terrainInfoQueue = new Queue<TerrainMeshDataInfo<TerrainMeshData>>();
@@ -54,7 +54,8 @@ public class TerrainGenerator : MonoBehaviour
     // void Update()
     // {
     //     // Spawn a single terrain, only for editing
-    //     Mesh mesh = new Mesh();
+    //     if (mesh) mesh.Clear();
+    //     mesh = new Mesh();
     //     GetComponent<MeshFilter>().mesh = mesh;
     //     TerrainMeshData data = CreateMeshData(Vector2.zero);
     //     mesh.vertices = data.vertices;
@@ -179,26 +180,18 @@ public class TerrainGenerator : MonoBehaviour
         for (int i = 0; i < vertices.Length; i++)
         {
 
+
+
             // Ensure height is within range
-            float evaluateHeight = vertices[i].y;
-
-            if (evaluateHeight > estimatedMaxHeight)
-            {
-                evaluateHeight = estimatedMaxHeight;
-            }
-
-            if (evaluateHeight < 0)
-            {
-                evaluateHeight = 0.1f;
-            }
-
+            float evaluateHeight = Mathf.Clamp(vertices[i].y, 0.1f, estimatedMaxHeight);
             float lerpedHeight = Mathf.InverseLerp(0, estimatedMaxHeight + 0.1f, evaluateHeight);
 
-
-            // Sets a curve for ensuring water is not curvy
+            // Sets a curve for smooth terrain transition
             float curvedHeight = meshHeightCurve.Evaluate(lerpedHeight);
 
             colors[i] = gradient.Evaluate(curvedHeight);
+
+            if (curvedHeight > 1 || curvedHeight < 0) Debug.Log(curvedHeight);
 
             vertices[i].y = curvedHeight * noiseWeightOnHeight;
         }
