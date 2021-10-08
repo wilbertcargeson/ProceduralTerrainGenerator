@@ -19,7 +19,7 @@ public class TerrainGenerator : MonoBehaviour
     public float scale = 65;
 
     // Seed for randomizer to calculate overall noise offset
-    public int seed = 1;
+    public static int seed = 1;
 
     [Range(0, 10)]
     public int octaves = 4;
@@ -32,7 +32,7 @@ public class TerrainGenerator : MonoBehaviour
     public float lacunarity = 5;
 
     // The magnitude in which the noise will affect the terrain, affects mountain height generally
-    public float noiseWeightOnHeight = 20;
+    public static float noiseWeightOnHeight = 120;
 
 
     public Gradient gradient;
@@ -45,10 +45,13 @@ public class TerrainGenerator : MonoBehaviour
     [Range(0, 6)]
     public int levelOfDetail;
 
+    public static float estimatedMaxHeight = 1.75f;
+
+
 
     Queue<TerrainMeshDataInfo<TerrainMeshData>> terrainInfoQueue = new Queue<TerrainMeshDataInfo<TerrainMeshData>>();
 
-    // void Start()
+    // void Update()
     // {
     //     // Spawn a single terrain, only for editing
     //     Mesh mesh = new Mesh();
@@ -59,6 +62,8 @@ public class TerrainGenerator : MonoBehaviour
     //     mesh.triangles = data.triangles;
     //     mesh.RecalculateNormals();
     // }
+
+
     void Update()
     {
         if (terrainInfoQueue.Count > 0)
@@ -98,10 +103,12 @@ public class TerrainGenerator : MonoBehaviour
         Vector3[] vertices;
         int[] triangles;
         Color[] colors;
+        Vector2[] uvs;
 
         vertices = new Vector3[((terrainSize + 1) * (terrainSize + 1))];
         colors = new Color[vertices.Length];
         triangles = new int[6 * vertices.Length];
+        uvs = new Vector2[vertices.Length];
 
         System.Random pseudoRandom = new System.Random(seed);
 
@@ -162,14 +169,15 @@ public class TerrainGenerator : MonoBehaviour
 
                     triangleIndex += 6;
                 }
+                uvs[index] = new Vector2((float)x / terrainSize, (float)z / terrainSize);
                 index++;
             }
         }
 
+
         // Evaluate height and colors of vertices
         for (int i = 0; i < vertices.Length; i++)
         {
-            float estimatedMaxHeight = 1.5f;
 
             // Ensure height is within range
             float evaluateHeight = vertices[i].y;
@@ -197,7 +205,7 @@ public class TerrainGenerator : MonoBehaviour
 
 
 
-        return new TerrainMeshData(vertices, triangles, colors);
+        return new TerrainMeshData(vertices, triangles, colors, uvs);
     }
 
     void OnValidate()
@@ -220,11 +228,14 @@ public class TerrainGenerator : MonoBehaviour
         public int[] triangles;
         public Color[] colors;
 
-        public TerrainMeshData(Vector3[] vertices, int[] triangles, Color[] colors)
+        public Vector2[] uvs;
+
+        public TerrainMeshData(Vector3[] vertices, int[] triangles, Color[] colors, Vector2[] uvs)
         {
             this.vertices = vertices;
             this.triangles = triangles;
             this.colors = colors;
+            this.uvs = uvs;
         }
     }
 

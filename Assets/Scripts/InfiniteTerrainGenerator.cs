@@ -22,6 +22,11 @@ public class InfiniteTerrainGenerator : MonoBehaviour
 
     static TerrainGenerator terrainGenerator;
 
+    public GameObject treePrefab;
+
+    System.Random pseudoRandom;
+
+
 
     void Start()
     {
@@ -29,7 +34,9 @@ public class InfiniteTerrainGenerator : MonoBehaviour
         Debug.Log(terrainGenerator);
         terrainSize = TerrainGenerator.terrainSize;
         visibleTerrainDistance = Mathf.RoundToInt(maxViewPov / terrainSize);
+        pseudoRandom = new System.Random(TerrainGenerator.seed + 1);
         UpdateVissibleTerrain();
+
     }
 
     void Update()
@@ -72,7 +79,7 @@ public class InfiniteTerrainGenerator : MonoBehaviour
                     // the lower the level of detail ( in this case: higher number )
                     int meshLOD = 1;
 
-                    terrainDictionary.Add(viewedTerrainCoor, new TerrainObject(viewedTerrainCoor, terrainSize, this.transform, terrainMaterial, meshLOD));
+                    terrainDictionary.Add(viewedTerrainCoor, new TerrainObject(viewedTerrainCoor, terrainSize, this.transform, terrainMaterial, meshLOD, treePrefab, pseudoRandom));
                 }
             }
         }
@@ -90,12 +97,22 @@ public class InfiniteTerrainGenerator : MonoBehaviour
         MeshCollider terrainMeshCollider;
 
         MeshFilter terrainMeshFilter;
-        public TerrainObject(Vector2 coordinate, int size, Transform parentTransform, Material material, int meshLOD)
+
+        System.Random pseudoRandom;
+
+        GameObject treePrefab;
+
+        Vector3 positionVector;
+
+
+        public TerrainObject(Vector2 coordinate, int size, Transform parentTransform, Material material, int meshLOD, GameObject treePrefab, System.Random random)
         {
+            this.treePrefab = treePrefab;
+            pseudoRandom = random;
             position = coordinate * size;
             Debug.Log(position);
             bounds = new Bounds(position, Vector2.one * size);
-            Vector3 positionVector = new Vector3(position.x, 0, position.y);
+            positionVector = new Vector3(position.x, 0, position.y);
 
             // Generate terrain
             terrainObj = new GameObject("Terrain plane");
@@ -110,17 +127,34 @@ public class InfiniteTerrainGenerator : MonoBehaviour
             SetVisible(false);
 
             terrainGenerator.RequestTerrainMeshData(OnMeshReceived, position, meshLOD);
+
         }
 
+        // Function to call for threading
         void OnMeshReceived(TerrainGenerator.TerrainMeshData terrainData)
         {
             Mesh newMesh = new Mesh();
             newMesh.vertices = terrainData.vertices;
             newMesh.colors = terrainData.colors;
             newMesh.triangles = terrainData.triangles;
+            newMesh.uv = terrainData.uvs;
             newMesh.RecalculateNormals();
             terrainMeshFilter.mesh = newMesh;
             terrainMeshCollider.sharedMesh = newMesh;
+            spawnTrees(terrainData.vertices);
+        }
+
+        void spawnTrees(Vector3[] vertices)
+        {
+            for (int i = 0; i < vertices.Length; i++)
+            {
+                float heightPercentile = Mathf.InverseLerp(0, TerrainGenerator.estimatedMaxHeight * TerrainGenerator.noiseWeightOnHeight, vertices[i].y);
+                if (heightPercentile < 0.6 && heightPercentile > 0.10 && pseudoRandom.Next(1, 100) < 5)
+                {
+                    Vector3 placedTreeLocation = new Vector3(vertices[i].x, vertices[i].y + 0.1f, vertices[i].z) + positionVector;
+                    Instantiate(treePrefab, placedTreeLocation, Quaternion.identity, terrainObj.transform);
+                }
+            }
         }
 
         public void UpdateTerrainObject()
