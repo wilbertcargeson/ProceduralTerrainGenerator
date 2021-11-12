@@ -1,5 +1,5 @@
 # Procedural Terrain Generator
-Generates a terrain procedurally using Perlin Noise Map
+Generates a terrain procedurally infinitely using Perlin Noise Map
 Created in Unity using C# Script
 
 ## References :
